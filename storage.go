@@ -75,7 +75,30 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 }
 
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
-	return nil, nil
+	querry := fmt.Sprintf(`SELECT * FROM account WHERE ID = %d`, id)
+	row, err := s.db.Query(querry)
+	if err != nil {
+		return nil, err
+	}
+
+	account := &Account{}
+	if !row.Next() {
+		return nil, fmt.Errorf("no Account was fount with ID: %d", id)
+	}
+
+	err = row.Scan(
+		&account.ID,
+		&account.FirstName,
+		&account.LastName,
+		&account.Number,
+		&account.Balance,
+		&account.CreatedAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
 func (s *PostgresStore) GetAccounts() ([]*Account, error) {
