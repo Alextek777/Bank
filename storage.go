@@ -63,6 +63,16 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 	}
 	fmt.Printf("%+v\n", res)
 
+	//// TODO
+	// query = "SELECT id FROM account WHERE first_name = $1 AND last_name = $2"
+	// res, err = s.db.Query(query, acc.FirstName, acc.LastName)
+	// if err != nil || !res.Next() {
+	// 	acc.ID = -1
+	// 	return nil
+	// }
+
+	// res.Scan(&acc.ID)
+
 	return nil
 }
 
@@ -71,7 +81,9 @@ func (s *PostgresStore) UpdateAccount(*Account) error {
 }
 
 func (s *PostgresStore) DeleteAccount(id int) error {
-	return nil
+	_, err := s.db.Query("DELETE FROM account WHERE id = $1", id)
+
+	return err
 }
 
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
