@@ -13,6 +13,7 @@ type Storage interface {
 	UpdateAccount(*Account) error
 	GetAccounts() ([]*Account, error)
 	GetAccountByID(int) (*Account, error)
+	GetAccountByNumber(int) (*Account, error)
 }
 
 type PostgresStore struct {
@@ -40,13 +41,14 @@ func (s *PostgresStore) Init() error {
 }
 
 func (s *PostgresStore) createTable() error {
-	query := `CREATE TABLE IF NOT EXISTS account (
-		id SERIAL PRIMARY KEY,
-		first_name VARCHAR(50),
-		last_name  VARCHAR(50),
-		number SERIAL,
-		balance SERIAL,
-		created_at TIMESTAMP
+	query := `create table if not exists account (
+		id 					serial primary key,
+		first_name 			varchar(100),
+		last_name 			varchar(100),
+		number 				serial,
+		encrypted_password 	varchar(100),
+		balance 			serial,
+		created_at 			timestamp
 	)`
 
 	_, err := s.db.Exec(query)
@@ -54,30 +56,39 @@ func (s *PostgresStore) createTable() error {
 }
 
 func (s *PostgresStore) CreateAccount(acc *Account) error {
-	query := `INSERT INTO account (first_name, last_name, number, balance, created_at)
-			  VALUES ($1, $2, $3, $4, $5)`
+	query := `INSERT INTO account (first_name, last_name, number, encrypted_password, balance, created_at)
+			  VALUES ($1, $2, $3, $4, $5, $6)`
 
-	res, err := s.db.Query(query, acc.FirstName, acc.LastName, acc.Number, acc.Balance, acc.CreatedAt)
+	_, err := s.db.Query(query, acc.FirstName, acc.LastName, acc.Number, acc.EncryptedPassword, acc.Balance, acc.CreatedAt)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%+v\n", res)
-
-	//// TODO
-	// query = "SELECT id FROM account WHERE first_name = $1 AND last_name = $2"
-	// res, err = s.db.Query(query, acc.FirstName, acc.LastName)
-	// if err != nil || !res.Next() {
-	// 	acc.ID = -1
-	// 	return nil
-	// }
-
-	// res.Scan(&acc.ID)
 
 	return nil
 }
 
 func (s *PostgresStore) UpdateAccount(*Account) error {
 	return nil
+}
+
+func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
+	querry := fmt.Sprintf(`SELECT * FROM account WHERE number = %d`, number)
+	row, err := s.db.Query(querry)
+	if err != nil {
+		return nil, err
+	}
+
+	if !row.Next() {
+		return nil, fmt.Errorf("no Account was fount with number: %d", number)
+	}
+
+	account, err := scanIntoAccount(row)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
 func (s *PostgresStore) DeleteAccount(id int) error {
@@ -93,18 +104,11 @@ func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 		return nil, err
 	}
 
-	account := &Account{}
 	if !row.Next() {
 		return nil, fmt.Errorf("no Account was fount with ID: %d", id)
 	}
 
-	err = row.Scan(
-		&account.ID,
-		&account.FirstName,
-		&account.LastName,
-		&account.Number,
-		&account.Balance,
-		&account.CreatedAt)
+	account, err := scanIntoAccount(row)
 
 	if err != nil {
 		return nil, err
@@ -121,14 +125,7 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 
 	accounts := []*Account{}
 	for rows.Next() {
-		account := &Account{}
-		err := rows.Scan(
-			&account.ID,
-			&account.FirstName,
-			&account.LastName,
-			&account.Number,
-			&account.Balance,
-			&account.CreatedAt)
+		account, err := scanIntoAccount(rows)
 
 		if err != nil {
 			return nil, err
@@ -137,4 +134,18 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 	}
 
 	return accounts, nil
+}
+
+func scanIntoAccount(rows *sql.Rows) (*Account, error) {
+	account := new(Account)
+	err := rows.Scan(
+		&account.ID,
+		&account.FirstName,
+		&account.LastName,
+		&account.Number,
+		&account.EncryptedPassword,
+		&account.Balance,
+		&account.CreatedAt)
+
+	return account, err
 }
