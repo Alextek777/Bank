@@ -37,7 +37,6 @@ func (s *APIServer) Run() {
 	http.ListenAndServe(s.listenAddr, router)
 }
 
-// 98081
 func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != "POST" {
 		return fmt.Errorf("method not allowed %s", r.Method)
@@ -54,9 +53,22 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	fmt.Printf("%+v\n", acc)
+	if !acc.ValidAccount(req.Password) {
+		WriteJSON(w, http.StatusForbidden, ApiError{Error: "not authenticated"})
+		return err
+	}
 
-	return WriteJSON(w, http.StatusOK, req)
+	token, err := createJWT(acc)
+	if err != nil {
+		return err
+	}
+
+	resp := LoginResponse{
+		Token:  token,
+		Number: acc.Number,
+	}
+
+	return WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
