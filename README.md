@@ -6,6 +6,25 @@ server runs on localhost:3000
 
 RestApi:
 
+//get all acc
 GET localhost:3000/account
-GET localhost:3000/account/{id}
+
+//need to use in header 'x-jwt-token'  with of acc
+//{
+//"number": 582384,
+//"password": "password"
+//}
+GET localhost:3000/login
+
+//create account use in body
+//example :
+
+//{
+//"firstName": "Alex",
+//"lastName": "Tek",
+//"password": "ultrapassword"
+//}
 POST localhost:3000/account
+
+//delete account
+DELETE localhost:3000/account/{id}
