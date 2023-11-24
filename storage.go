@@ -14,6 +14,7 @@ type Storage interface {
 	GetAccounts() ([]*Account, error)
 	GetAccountByID(int) (*Account, error)
 	GetAccountByNumber(int) (*Account, error)
+	MakeTransaction(sourceID int, destinationID int, amount float64) string
 }
 
 type PostgresStore struct {
@@ -47,7 +48,7 @@ func (s *PostgresStore) createTable() error {
 		last_name 			varchar(100),
 		number 				serial,
 		encrypted_password 	varchar(100),
-		balance 			serial,
+		balance 			serial CHECK (balance >= 0),
 		created_at 			timestamp
 	)`
 
@@ -72,8 +73,8 @@ func (s *PostgresStore) UpdateAccount(*Account) error {
 }
 
 func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
-	querry := fmt.Sprintf(`SELECT * FROM account WHERE number = %d`, number)
-	row, err := s.db.Query(querry)
+	query := fmt.Sprintf(`SELECT * FROM account WHERE number = %d`, number)
+	row, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +96,43 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	_, err := s.db.Query("DELETE FROM account WHERE id = $1", id)
 
 	return err
+}
+
+func (s *PostgresStore) MakeTransaction(sourceID int, destinationID int, amount float64) string {
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err.Error()
+	}
+
+	query := fmt.Sprintf("UPDATE account SET balance = balance - %f	WHERE id = %d;", amount, sourceID)
+
+	_, err = tx.Exec(query)
+
+	if err != nil {
+		return err.Error()
+	}
+
+	query = fmt.Sprintf("UPDATE account SET balance = balance + %f	WHERE id = %d;", amount, destinationID)
+
+	_, err = tx.Exec(query)
+
+	if err != nil {
+		rollbackError := tx.Rollback()
+		if rollbackError != nil {
+			return "rollback error!"
+		}
+
+		return err.Error()
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return err.Error()
+	}
+
+	return "Transaction complited sucessfully!"
 }
 
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
