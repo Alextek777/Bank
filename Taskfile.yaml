@@ -1,0 +1,32 @@
+version: "3"
+
+tasks:
+  protogen:
+    aliases:
+      - gen
+    desc: "Generate code for proto files"
+    cmds:
+      - protoc -I protos/proto protos/proto/sso/sso.proto --go_out=./protos/gen/sso --go_opt=paths=source_relative --go-grpc_out=./protos/gen/sso/ --go-grpc_opt=paths=source_relative
+
+
+  build:
+    aliases:
+      - build
+    desc: "build projects"
+    cmds:
+      - go build -o bin/goBank internal/app/*.go
+
+  run:
+    aliases:
+      - run
+    desc: "runs programs"
+    cmds:
+      - task build
+      - ./bin/goBank
+
+  test:
+    aliases:
+     - test
+    desc: "run tests"
+    cmds:
+      - go test -v ./internal/app/...

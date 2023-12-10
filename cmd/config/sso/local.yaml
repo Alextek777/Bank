@@ -1,0 +1,13 @@
+env: "local" # dev, prod
+
+database:
+  storage_ip: "127.0.0.1"
+  storage_port: 5432
+  storage_user: "postgres"
+  storage_password: "postgres"
+
+grpc:
+  port: 44044
+  timeout: 10h
+
+token_ttl: 1h
