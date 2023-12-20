@@ -15,14 +15,16 @@ tasks:
     desc: "build projects"
     cmds:
       - go build -o bin/goBank internal/app/*.go
+      - go build -o bin/cmd    cmd/sso/main.go
 
   run:
     aliases:
-      - run
+      - run 
     desc: "runs programs"
     cmds:
       - task build
-      - ./bin/goBank
+      #- ./bin/goBank
+      - ./bin/cmd
 
   test:
     aliases:
